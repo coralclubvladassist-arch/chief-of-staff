@@ -394,7 +394,7 @@ function switchScreen(name) {
 
 async function loadData() {
   try {
-    const res = await fetch(BACKEND + "?action=getData");
+    const res = await fetch(BACKEND + "?action=getData&t=" + Date.now());
     const json = await res.json();
     if (json.ok) {
       data = json.data;
