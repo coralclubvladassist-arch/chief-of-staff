@@ -351,7 +351,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ВНИМАНИЕ: Обязательно замени эту ссылку на URL твоего НОВОГО развертывания Web App из Google Apps Script
+// ВАША НОВАЯ ССЫЛКА ЗДЕСЬ
 const BACKEND = "https://script.google.com/macros/s/AKfycbxd2xIfaA1OardShpQPmWqrcCVH_SOIa8YUiOn8Ip-jx9_7WVcs9kbbXSKmuKXI9OwAvg/exec";
 
 // Init Telegram
@@ -361,15 +361,6 @@ if (tg) { tg.ready(); tg.expand(); }
 // State
 let data = { meetings: [], tasks: [], reminders: [], trips: [] };
 let loaded = false;
-
-// ── UTILS (FORMATTING) ──────────────────────────────────
-// Конвертирует YYYY-MM-DD в DD.MM.YYYY
-function formatDateToRU(dateStr) {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
-  return dateStr;
-}
 
 // ── NAVIGATION ──────────────────────────────────────────
 
@@ -394,6 +385,7 @@ function switchScreen(name) {
 
 async function loadData() {
   try {
+    // ДОБАВЛЕНО ?t=... ДЛЯ ЗАЩИТЫ ОТ КЭША ТЕЛЕГРАМА
     const res = await fetch(BACKEND + "?action=getData&t=" + Date.now());
     const json = await res.json();
     if (json.ok) {
@@ -415,7 +407,7 @@ async function renderHome() {
   const today = getTodayStr();
   const todayMeetings = data.meetings.filter(m => m.date === today);
   const activeTasks   = data.tasks.filter(t => t.status !== 'Готово' && t.status !== '✅ Готово');
-  const urgentTasks   = activeTasks.filter(t => t.priority === 'Высокий');
+  const urgentTasks   = activeTasks.filter(t => t.priority && t.priority.includes('Высокий'));
   const upcomingTrips = data.trips.filter(t => t.status !== 'Завершена');
 
   const dateStr = new Date().toLocaleDateString('ru-RU', { weekday:'long', day:'numeric', month:'long' });
@@ -521,8 +513,8 @@ async function renderTasks() {
 
   let html = `<div class="header"><div class="header-title">✅ Задачи</div></div>`;
 
-  const urgent = active.filter(t => t.priority === 'Высокий');
-  const normal = active.filter(t => t.priority !== 'Высокий');
+  const urgent = active.filter(t => t.priority && t.priority.includes('Высокий'));
+  const normal = active.filter(t => !t.priority || !t.priority.includes('Высокий'));
 
   if (urgent.length > 0) {
     html += `<div class="section-title">🔴 Высокий приоритет</div>`;
@@ -545,7 +537,7 @@ async function renderTasks() {
 }
 
 function taskCard(t) {
-  const prioColor = t.priority === 'Высокий' ? 'red' : t.priority === 'Средний' ? 'yellow' : 'green';
+  const prioColor = t.priority && t.priority.includes('Высокий') ? 'red' : t.priority && t.priority.includes('Средний') ? 'yellow' : 'green';
   const statusColor = (t.status === 'Готово' || t.status === '✅ Готово') ? 'green' : t.status === '🔄 В работе' || t.status === 'В работе' ? 'blue' : 'purple';
   return `<div class="card" onclick="openTask(${JSON.stringify(t).replace(/"/g, '&quot;')})">
     <div class="card-name">${t.name || '—'}</div>
@@ -668,9 +660,9 @@ function openAddTask() {
     <div class="form-group">
       <label class="form-label">Приоритет</label>
       <select class="form-select" id="add-task-priority">
-        <option>Высокий</option>
-        <option selected>Средний</option>
-        <option>Низкий</option>
+        <option>🔴 Высокий</option>
+        <option selected>🟡 Средний</option>
+        <option>🟢 Низкий</option>
       </select>
     </div>
     <div class="form-group">
@@ -746,7 +738,7 @@ async function submitTask() {
   if (!name) { showToast('Введите название'); return; }
   const task = {
     name,
-    deadline: formatDateToRU(document.getElementById('add-task-deadline').value),
+    deadline: document.getElementById('add-task-deadline').value,
     priority: document.getElementById('add-task-priority').value,
     owner: document.getElementById('add-task-owner').value,
     status: 'Новая'
@@ -766,7 +758,7 @@ async function submitMeeting() {
   if (!name) { showToast('Введите название'); return; }
   const meeting = {
     name,
-    date: formatDateToRU(document.getElementById('add-meeting-date').value),
+    date: document.getElementById('add-meeting-date').value,
     time: document.getElementById('add-meeting-time').value,
     participants: document.getElementById('add-meeting-participants').value,
     link: document.getElementById('add-meeting-link').value,
